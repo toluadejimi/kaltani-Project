@@ -170,6 +170,8 @@ Route::group(['middleware' => ['auth:api','access']], function(){
     Route::post('get-user', [AuthCoontroller::class, 'get_user']);
     Route::post('agent-waste-list', [CollectionController::class, 'agent_waste_list']);
     Route::post('agent-waste-list-update', [CollectionController::class, 'agent_waste_list_update']);
+    Route::post('udpade-dropoff-weight', [CollectionController::class, 'update_dropoff_weight']);
+
 
 
 

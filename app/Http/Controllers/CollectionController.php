@@ -476,23 +476,40 @@ class CollectionController extends Controller
    }
    
    
-//   public function agent_waste_list_update(REQUEST $request){
+                public function update_dropoff_weight(REQUEST $request){
 
-//     $order_id = $request->all();
+                    $order_id = $request-> order_id;
+                    $weight = $request-> weight;
 
-    
-//     $update=DropOff::where('order_id',  $order_id)
-//             ->update([
-//             'status' => 1
-//         ]);
-    
-//             return response()->json([
-//                 "status" => $this->SuccessStatus,
-//                 "message" => "Successfully Updated Order",
-//                 "drop_off" => $updste,
-//             ],200);
 
-//   }
+
+
+                    $get_plastic_waste = PlasticWaste::where('id',$weight)
+                    ->first();
+                    $plastic_waste_name = $get_plastic_waste->name;
+                    $plastic_waste_weight = $get_plastic_waste->weight;
+
+
+
+                    $get_rate = Rate::all()->first();
+                    $rate = $get_rate->rate;
+
+
+                    $update=DropOff::where('order_id',  $order_id)
+                            ->update([
+                            'weight' => $plastic_waste_name,
+                            'waste_weight' => $plastic_waste_weight,
+                            'amount' => $plastic_waste_weight * $rate,
+
+
+                        ]);
+                    
+                            return response()->json([
+                                "status" => $this->SuccessStatus,
+                                "message" => "Drop Off Successfully Updated",
+                            ],200);
+
+                }
 
 
 
