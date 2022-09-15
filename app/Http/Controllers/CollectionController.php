@@ -18,6 +18,7 @@ use Illuminate\Http\Response;
 use Auth;
 use DB;
 use Mail;
+use Illuminate\Support\Str;
 
 class CollectionController extends Controller
 {
@@ -268,17 +269,131 @@ class CollectionController extends Controller
         $drop->waste_weight = $plastic_weight;
         $drop->save();
 
-        $user_email = Auth()->user();
-        $receiveremail = $user_email->email;
+        $get_user_firebaseToken = User::where('id', Auth::id())
+        ->first();
+        $user_firebaseToken = $get_user_firebaseToken->device_id;
+    
+                
+            $SERVER_API_KEY = env('FCM_SERVER_KEY');
 
-        //send email
+
+        
+            $data = [
+                "registration_ids" => array($user_firebaseToken),
+                "notification" => [
+                    "title" => 'Drop Off Created',
+                    "body" => "Your order has been successfully created. Head to collection center to Drop off your Plastic waste.",  
+                ]
+            ];
+            $dataString = json_encode($data);
+          
+            $headers = [
+                'Authorization: key=' . $SERVER_API_KEY,
+                'Content-Type: application/json',
+            ];
+          
+            $ch = curl_init();
+            
+            curl_setopt($ch, CURLOPT_URL, 'https://fcm.googleapis.com/fcm/send');
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $dataString);
+                     
+            $response = curl_exec($ch);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            //send to Agent
+            $get_agent_firebaseToken = User::where('location_id', $collection_center_id)
+            ->first();
+            $agent_firebaseToken = $get_agent_firebaseToken->device_id;
+
+        
+                    
+                $SERVER_API_KEY = env('FCM_SERVER_KEY');
+
+
+            
+                $data = [
+                    "registration_ids" => array($agent_firebaseToken),
+                    "notification" => [
+                        "title" => 'Drop Off Created',
+                        "body" => "Your order has been successfully created. Head to collection center to Drop off your Plastic waste.",  
+                    ]
+                ];
+                $dataString = json_encode($data);
+
+
+              
+                $headers = [
+                    'Authorization: key=' . $SERVER_API_KEY,
+                    'Content-Type: application/json',
+                ];
+              
+                $ch = curl_init();
+
+                
+                curl_setopt($ch, CURLOPT_URL, 'https://fcm.googleapis.com/fcm/send');
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $dataString);
+                         
+                $get_response = curl_exec($ch);
+
+
+    
+    
+    
+            $user_email = Auth()->user();
+            $receiveremail = $user_email->email;
+    
+            //send email to sender
+            $data = array(
+                'fromsender' => 'noreply@kaltaniims.com', 'KALTANI',
+                'subject' => "New Drop Off",
+                'toreceiver' => $receiveremail
+                );
+    
+                Mail::send('dropoff', $data, function($message) use ($data){
+                    $message->from($data['fromsender']);
+                    $message->to( $data['toreceiver'] );
+                    $message->subject($data['subject']);
+    
+                });
+
+
+
+
+        $get_receiver_email = User::where('location_id', $collection_center_id)
+        ->first();
+        $receiveremail = $get_receiver_email->email;
+
+        //send email to receiver
         $data = array(
             'fromsender' => 'noreply@kaltaniims.com', 'KALTANI',
             'subject' => "New Drop Off",
             'toreceiver' => $receiveremail
             );
 
-            Mail::send('dropoff', $data, function($message) use ($data){
+            Mail::send('agentdropoff', $data, function($message) use ($data){
                 $message->from($data['fromsender']);
                 $message->to( $data['toreceiver'] );
                 $message->subject($data['subject']);
@@ -305,19 +420,39 @@ class CollectionController extends Controller
 
        
         $order_id = $request->order_id;
-        $user_id = $request->user_id = Auth::id();
         
         $get_orderamount = DropOff::where('order_id',$order_id)
         ->first();
-        
         $orderamount = $get_orderamount->amount;
-        
+
+        $get_order_weight = DropOff::where('order_id',$order_id)
+        ->first();
+        $order_weight = $get_order_weight->waste_weight;
+
+
+        $get_location_id = DropOff::where('order_id',$order_id)
+        ->first();
+        $receiver_id = $get_location_id->receiver_id;
+
+
+
+        $get_user_id = DropOff::where('order_id',$order_id)
+        ->first();
+        $user_id = $get_user_id ->user_id;
+
+
+            $file = $request->file('agent_image');
+            $fileName = $file->getClientOriginalName();
+            $destinationPath = public_path().'upload/agent' ;
+            $request->agent_image->move(public_path('upload/agent'),$fileName);
+
 
         try{
 
             DropOff::where('order_id',  $order_id)
             ->update([
-            'status' => 1
+            'status' => 1,
+            'agent_image' => $fileName
         ]);
 
 
@@ -325,13 +460,31 @@ class CollectionController extends Controller
 
         //create Credit transaction
         $transaction = new Transaction();
-        $transaction->user_id = Auth::id();
+        $transaction->trans_id = Str::random(8);
+        $transaction->reference = Str::random(15);
+        $transaction->user_id = $user_id;
         $transaction->amount = $orderamount;
         $transaction->type = 'Credit';
         $transaction->save();
 
+        //Add to collection
+        $collection = new Collection();
+        $collection->item_id = 1;
+        $collection->price_per_kg = 0;
+        $collection->transport = 0;
+        $collection->loader = 0;
+        $collection->others = 0;
+        $collection->item_weight = $order_weight;
+        $collection->location_id = $receiver_id;
+        $collection->amount = 0;
+        $collection->user_id = Auth::id();
+        $collection->save();
+
+
+
         //update wallet
-        $userwallet = Auth()->user();
+        $userwallet = User::where('id', $user_id)
+        ->first();
         $useramount = $userwallet->wallet;
         $addmoney = (int)$orderamount + (int)$useramount;
 
@@ -341,8 +494,10 @@ class CollectionController extends Controller
         'wallet' => $addmoney
     ]);
 
-    $user_email = Auth()->user();
-    $receiveremail = $user_email->email;
+    $get_user_email = User::where('id', $user_id)
+    ->first();
+    $receiveremail = $get_user_email->email;
+
 
 
             //send email
@@ -361,13 +516,47 @@ class CollectionController extends Controller
                 });
 
 
+    //send app nofication
+    $get_user_firebaseToken = User::where('id', $user_id)
+    ->first();
+    $user_firebaseToken = $get_user_firebaseToken->device_id;
+
+            
+        $SERVER_API_KEY = env('FCM_SERVER_KEY');
+    
+        $data = [
+            "registration_ids" => array($user_firebaseToken),
+            "notification" => [
+                "title" => 'Wallet Updated',
+                "body" => "Your Wallet has been credited  with $orderamount ",  
+            ]
+        ];
+        $dataString = json_encode($data);
+      
+        $headers = [
+            'Authorization: key=' . $SERVER_API_KEY,
+            'Content-Type: application/json',
+        ];
+      
+        $ch = curl_init();
+        
+        curl_setopt($ch, CURLOPT_URL, 'https://fcm.googleapis.com/fcm/send');
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $dataString);
+                 
+        $response = curl_exec($ch);
+    
+    
+
+
         return response()->json([
             "status" => $this->SuccessStatus,
             "message" => "Successfully Updated $orderamount has been added to your wallet ",
-        ],200);
-
             
-
+        ],200);
 
 
 
@@ -514,21 +703,5 @@ class CollectionController extends Controller
 
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

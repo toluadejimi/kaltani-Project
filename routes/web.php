@@ -70,6 +70,8 @@ Route::group(['middleware' => ['adminAuth']], function()
     //drop off
     Route::get('/drop-off', [MainController::class,'drop_offlist']);
     Route::delete('dropoffDelete/{id}', [MainController::class,'dropoffDelete']);
+    Route::get('drop_off_details/{id}', [MainController::class,  'viewdropoff']);
+
     
     
     //agent request

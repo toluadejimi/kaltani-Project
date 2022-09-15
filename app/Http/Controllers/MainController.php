@@ -471,6 +471,64 @@ class MainController extends Controller
       
         
     }
+
+
+  
+
+    public function viewdropoff($id)
+    {
+
+        $drop_off = DropOff::find($id);
+        $drop_off_details = DropOff::where('id', $drop_off->id)->get();
+
+        $get_weight = DropOff::where('id', $drop_off->id)
+        ->first();
+        $weight = $get_weight->weight;
+
+        $get_amount = DropOff::where('id', $drop_off->id)
+        ->first();
+        $amount = $get_amount->amount;
+
+        $get_collection_center = DropOff::where('id', $drop_off->id)
+        ->first();
+        $collection_center = $get_collection_center->collection_center;
+
+        $get_customer_name = DropOff::where('id', $drop_off->id)
+        ->first();
+        $customer = $get_customer_name->customer;
+
+        $get_customer_image = DropOff::where('id', $drop_off->id)
+        ->first();
+        $image = $get_customer_image->image;
+
+        $get_agent_image = DropOff::where('id', $drop_off->id)
+        ->first();
+        $agent_image = $get_agent_image->agent_image;
+
+        $get_status = DropOff::where('id', $drop_off->id)
+        ->first();
+        $status = $get_status->status;
+
+        $get_order_id = DropOff::where('id', $drop_off->id)
+        ->first();
+        $order_id = $get_order_id->order_id;
+
+        $get_order_id = DropOff::where('id', $drop_off->id)
+        ->first();
+        $id = $get_order_id->id;
+
+
+
+
+        $drop_off_list = DropOff::all();
+
+     
+        
+
+        return view('drop_off_details',compact('drop_off_list','id','order_id','status','agent_image','image','customer','collection_center','amount','drop_off', 'weight'));
+    }
+
+    
     
     
     public function dropoffDelete($id){
@@ -550,8 +608,10 @@ class MainController extends Controller
        $money_out_to_customer = Transaction::where('type', 'debit')->sum('amount');
 
        $transactions = Transaction::all();
+
+       $users = User::all();
     
-       return view('transactions',compact('transactions','money_out_to_customer'));
+       return view('transactions',compact('transactions','money_out_to_customer','users'));
       
         
     }
@@ -1086,9 +1146,14 @@ class MainController extends Controller
         $cl = CollectedDetails::where('location_id',$collection->id)->first();
         //dd($cl);
         $collected = $cl->collected ?? 0;
+        $total_weight = Collection::where('location_id', $collection->id)->sum('item_weight');
+
+
+
+
         $bailed = BailedDetails::where('location_id', $collection->id)->sum(\DB::raw('Clean_Clear + Green_Colour + Others + Trash'));
         
-        return view('collection_center_details',compact('collect','collected','sorted','bailed'));
+        return view('collection_center_details',compact('collect','collected','sorted','bailed','total_weight'));
     }
     
     

@@ -106,7 +106,8 @@
                             <th>Amount</th>
                             <th>Collection Center</th>
                             <th>Customer</th>
-                            <th>Plastic Waste Image</th>
+                            <th>Customer Plastic Waste Image</th>
+                            <th>Agent Plastic Waste Image</th>
                             <th>Status</th>
                              <th>Date</th>
                              <th>Time</th>
@@ -116,12 +117,13 @@
                     <tbody>
                         @forelse ($dropofflist as $item)
                         <tr>
-                            <td>{{$item->order_id}}</td>
+                            <td><a href="/drop_off_details/{{$item->id}}">{{$item->order_id}}</a></td>
                             <td>{{$item->weight}}</td>
                             <td>NGN {{number_format($item->amount, 2)}}</td>
                             <td>{{$item->collection_center}}</td>
                             <td>{{$item->customer}}</td>
-                            <td><img src="{{ url('upload/customer/'.$item->image)}}"  width="50px" height="50px"/></td>
+                            <td><img src="{{ url('public/upload/customer/'.$item->image)}}"  width="50px" height="50px"/></td>
+                            <td><img src="{{ url('public/upload/agent/'.$item->agent_image)}}"  width="50px" height="50px"/></td>
                              @if($item->status =='0')         
                              <td><span class="badge rounded-pill bg-warning text-dark">Pending</span></td>         
                              @else
